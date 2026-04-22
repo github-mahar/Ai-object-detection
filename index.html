@@ -18,53 +18,66 @@
   <div class="page-bg page-bg-two"></div>
 
   <main class="app-shell">
-    <header class="hero">
-      <p class="eyebrow">Assistive Vision App</p>
-      <h1>Object Detection for Blinds</h1>
-      <p class="subtitle">A simple audio-first tool that speaks detected object names in real time.</p>
-      <span class="status-pill" id="loadingText" role="status" aria-live="polite">Loading model and camera...</span>
-    </header>
-
-    <section class="viewer-card">
-      <h2>Camera Feed</h2>
-      <!-- video with size of 0px because of chrome -->
-      <video playsinline autoplay muted controls="true" id="video" aria-hidden="true"></video>
-      <canvas id="c1" aria-label="Object detection preview canvas"></canvas>
-    </section>
-
-    <section class="control-card">
-      <h2>Quick Controls</h2>
-
-      <div class="control-row">
-        <div>
-          <p class="control-label">AI Detection</p>
-          <p class="control-helper">Start or stop spoken object-name announcements</p>
+    <section class="mac-window">
+      <div class="window-bar" aria-hidden="true">
+        <div class="traffic-lights">
+          <span class="light close"></span>
+          <span class="light minimize"></span>
+          <span class="light zoom"></span>
         </div>
-        <div class="switch-wrap">
-          <span class="switch-text">Off</span>
-          <div class="switch">
-            <label>
-              <input type="checkbox" id="ai" disabled aria-label="Toggle AI object detection">
-              <span class="lever"></span>
-            </label>
+        <p class="window-title">Object Detection for Blinds</p>
+      </div>
+
+      <div class="window-content">
+        <header class="hero">
+          <p class="eyebrow">Assistive Vision App</p>
+          <h1>Object Detection for Blinds</h1>
+          <p class="subtitle">A simple audio-first tool that speaks detected object names in real time.</p>
+          <span class="status-pill" id="loadingText" role="status" aria-live="polite">Loading model and camera...</span>
+        </header>
+
+        <section class="viewer-card">
+          <h2>Camera Feed</h2>
+          <!-- video with size of 0px because of chrome -->
+          <video playsinline autoplay muted controls="true" id="video" aria-hidden="true"></video>
+          <canvas id="c1" aria-label="Object detection preview canvas"></canvas>
+        </section>
+
+        <section class="control-card">
+          <h2>Quick Controls</h2>
+
+          <div class="control-row">
+            <div>
+              <p class="control-label">AI Detection</p>
+              <p class="control-helper">Start or stop spoken object-name announcements</p>
+            </div>
+            <div class="switch-wrap">
+              <span class="switch-text">Off</span>
+              <div class="switch">
+                <label>
+                  <input type="checkbox" id="ai" disabled aria-label="Toggle AI object detection">
+                  <span class="lever"></span>
+                </label>
+              </div>
+              <span class="switch-text">On</span>
+            </div>
           </div>
-          <span class="switch-text">On</span>
-        </div>
-      </div>
 
-      <div class="control-row">
-        <div>
-          <p class="control-label">Frame Rate</p>
-          <p class="control-helper">Higher values detect faster but use more battery and CPU</p>
-        </div>
-        <div class="fps-readout"><span id="fpsValue">50</span> FPS</div>
-      </div>
-      <p class="range-field fps-slider">
-        <input type="range" id="fps" min="1" max="60" value="50" aria-label="Detection frame rate">
-      </p>
+          <div class="control-row">
+            <div>
+              <p class="control-label">Frame Rate</p>
+              <p class="control-helper">Higher values detect faster but use more battery and CPU</p>
+            </div>
+            <div class="fps-readout"><span id="fpsValue">50</span> FPS</div>
+          </div>
+          <p class="range-field fps-slider">
+            <input type="range" id="fps" min="1" max="60" value="50" aria-label="Detection frame rate">
+          </p>
 
-      <div class="announce-card" id="announceText" aria-live="polite" aria-atomic="true">
-        Latest announcement will appear here...
+          <div class="announce-card" id="announceText" aria-live="polite" aria-atomic="true">
+            Latest announcement will appear here...
+          </div>
+        </section>
       </div>
     </section>
   </main>
