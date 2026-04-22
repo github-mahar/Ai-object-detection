@@ -10,10 +10,15 @@ const announceText = document.getElementById("announceText");
 var cameraAvailable = false;
 var aiEnabled = false;
 var fps = 16;
+let detectionInProgress = false;
 const speechSupported = "speechSynthesis" in window;
 const speechConfidenceThreshold = 0.6;
 const speechRepeatCooldownMs = 3000;
+const drawConfidenceThreshold = 0.55;
+const stableConfidenceThreshold = 0.7;
+const requiredStableFrames = 2;
 const lastSpokenLabelAt = {};
+const labelStreakCount = {};
 
 if (fpsValueText) {
     fpsValueText.innerText = document.getElementById("fps").value;
@@ -113,16 +118,27 @@ function changeFps() {
 }
 
 function ai() {
+    if (detectionInProgress) {
+        return;
+    }
+
+    detectionInProgress = true;
+
     // Detect objects in the image element
     objectDetector.detect(c1, (err, results) => {
+        detectionInProgress = false;
+
         if (err) {
             console.error(err);
             return;
         }
 
-        console.log(results); // Will output bounding boxes of detected objects
-        for (let index = 0; index < results.length; index++) {
-            const element = results[index];
+        const filteredDetections = getBestDetectionsByLabel(results, drawConfidenceThreshold);
+        const stableDetections = getStableDetections(filteredDetections);
+
+        console.log(stableDetections);
+        for (let index = 0; index < stableDetections.length; index++) {
+            const element = stableDetections[index];
             ctx1.font = "15px Arial";
             ctx1.fillStyle = "red";
             ctx1.fillText(element.label + " - " + (element.confidence * 100).toFixed(2) + "%", element.x + 10, element.y + 15);
@@ -133,8 +149,58 @@ function ai() {
             console.log(element.label);
         }
 
-        speakBestDetectedObject(results);
+        speakBestDetectedObject(stableDetections);
     });
+}
+
+function getBestDetectionsByLabel(results, minConfidence) {
+    const bestByLabel = {};
+
+    for (let index = 0; index < results.length; index++) {
+        const candidate = results[index];
+        if (!candidate || candidate.confidence < minConfidence) {
+            continue;
+        }
+
+        const currentBest = bestByLabel[candidate.label];
+        if (!currentBest || candidate.confidence > currentBest.confidence) {
+            bestByLabel[candidate.label] = candidate;
+        }
+    }
+
+    return Object.values(bestByLabel);
+}
+
+function getStableDetections(detections) {
+    const seenLabels = {};
+    for (let index = 0; index < detections.length; index++) {
+        const detection = detections[index];
+        seenLabels[detection.label] = true;
+
+        if (detection.confidence >= stableConfidenceThreshold) {
+            labelStreakCount[detection.label] = (labelStreakCount[detection.label] || 0) + 1;
+        } else {
+            labelStreakCount[detection.label] = 0;
+        }
+    }
+
+    const trackedLabels = Object.keys(labelStreakCount);
+    for (let index = 0; index < trackedLabels.length; index++) {
+        const label = trackedLabels[index];
+        if (!seenLabels[label]) {
+            labelStreakCount[label] = 0;
+        }
+    }
+
+    const stable = [];
+    for (let index = 0; index < detections.length; index++) {
+        const detection = detections[index];
+        if ((labelStreakCount[detection.label] || 0) >= requiredStableFrames) {
+            stable.push(detection);
+        }
+    }
+
+    return stable;
 }
 
 function speakBestDetectedObject(results) {
