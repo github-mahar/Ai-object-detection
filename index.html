@@ -2,44 +2,72 @@
 <html lang="en">
 
 <head>
-  <title>AI object detection</title>
+  <title>Object Detection for Blinds</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js" type="text/javascript"></script>
 </head>
 
 <body>
-  <h2 id="loadingText">Loading...</h2>
-  <!-- video with size of 0px because of chrome -->
-  <video playsinline autoplay muted controls="true" id="video"></video>
-  <br><br>
-  <canvas id="c1"></canvas>
-  <br><br>
-  <table>
-    <tr>
-      <td>AI:</td>
-      <td>
-        <div class="switch">
-          <label>
-            Off
-            <input type="checkbox" id="ai" disabled>
-            <span class="lever"></span>
-            On
-          </label>
+  <div class="page-bg page-bg-one"></div>
+  <div class="page-bg page-bg-two"></div>
+
+  <main class="app-shell">
+    <header class="hero">
+      <p class="eyebrow">Assistive Vision App</p>
+      <h1>Object Detection for Blinds</h1>
+      <p class="subtitle">A simple audio-first tool that speaks detected object names in real time.</p>
+      <span class="status-pill" id="loadingText" role="status" aria-live="polite">Loading model and camera...</span>
+    </header>
+
+    <section class="viewer-card">
+      <h2>Camera Feed</h2>
+      <!-- video with size of 0px because of chrome -->
+      <video playsinline autoplay muted controls="true" id="video" aria-hidden="true"></video>
+      <canvas id="c1" aria-label="Object detection preview canvas"></canvas>
+    </section>
+
+    <section class="control-card">
+      <h2>Quick Controls</h2>
+
+      <div class="control-row">
+        <div>
+          <p class="control-label">AI Detection</p>
+          <p class="control-helper">Start or stop spoken object-name announcements</p>
         </div>
-      </td>
-    </tr>
-    <tr>
-      <td>FPS:</td>
-      <td>
-        <p class="range-field">
-          <input type="range" id="fps" min="1" max="60" value="50">
-        </p>
-      </td>
-    </tr>
-  </table>
+        <div class="switch-wrap">
+          <span class="switch-text">Off</span>
+          <div class="switch">
+            <label>
+              <input type="checkbox" id="ai" disabled aria-label="Toggle AI object detection">
+              <span class="lever"></span>
+            </label>
+          </div>
+          <span class="switch-text">On</span>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div>
+          <p class="control-label">Frame Rate</p>
+          <p class="control-helper">Higher values detect faster but use more battery and CPU</p>
+        </div>
+        <div class="fps-readout"><span id="fpsValue">50</span> FPS</div>
+      </div>
+      <p class="range-field fps-slider">
+        <input type="range" id="fps" min="1" max="60" value="50" aria-label="Detection frame rate">
+      </p>
+
+      <div class="announce-card" id="announceText" aria-live="polite" aria-atomic="true">
+        Latest announcement will appear here...
+      </div>
+    </section>
+  </main>
 
   <script>
     var modelIsLoaded = false;
