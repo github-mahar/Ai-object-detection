@@ -233,6 +233,10 @@ video {
     padding-bottom: 4px;
 }
 
+.emotion-row {
+    align-items: flex-start;
+}
+
 .control-label {
     margin: 0;
     font-weight: 600;
@@ -271,6 +275,31 @@ video {
     font-family: "IBM Plex Mono", monospace;
     color: #2f64c6;
     font-weight: 600;
+}
+
+.emotion-readout {
+    min-width: 180px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(90, 116, 162, 0.24);
+    background: rgba(249, 252, 255, 0.95);
+    color: #305084;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: right;
+}
+
+.emotion-readout.ready {
+    background: rgba(233, 247, 236, 0.96);
+    border-color: rgba(46, 164, 79, 0.28);
+    color: #1f6a36;
+}
+
+.emotion-readout.warning {
+    background: rgba(252, 236, 231, 0.96);
+    border-color: rgba(194, 76, 51, 0.28);
+    color: #9e3b28;
 }
 
 .fps-slider {
