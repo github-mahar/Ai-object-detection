@@ -1,40 +1,53 @@
 document.getElementById("ai").addEventListener("change", toggleAi)
 document.getElementById("speech").addEventListener("change", toggleSpeech)
+document.getElementById("ocr").addEventListener("change", toggleOcr)
 document.getElementById("fps").addEventListener("input", changeFps)
 document.getElementById("flipCamera").addEventListener("click", flipCamera)
 document.getElementById("clearHistory").addEventListener("click", clearHistory)
+document.getElementById("scanText").addEventListener("click", scanCurrentFrame)
 
 const video = document.getElementById("video");
 const c1 = document.getElementById('c1');
 const ctx1 = c1.getContext('2d');
+const ocrCanvas = document.createElement("canvas");
+const ocrCtx = ocrCanvas.getContext('2d');
 const loadingText = document.getElementById("loadingText");
 const fpsValueText = document.getElementById("fpsValue");
 const announceText = document.getElementById("announceText");
 const emotionText = document.getElementById("emotionText");
+const ocrText = document.getElementById("ocrText");
+const ocrStatus = document.getElementById("ocrStatus");
 const historyList = document.getElementById("historyList");
 const emotionModelUrl = "https://justadudewhohacks.github.io/face-api.js/models";
 var cameraAvailable = false;
 var aiEnabled = false;
 var speechEnabled = true;
+var ocrEnabled = false;
 var cameraFacingMode = "environment";
 var fps = 16;
 let detectionInProgress = false;
 let emotionDetectionInProgress = false;
+let ocrInProgress = false;
 let emotionTick = 0;
+let ocrTick = 0;
 const speechSupported = "speechSynthesis" in window;
 const speechConfidenceThreshold = 0.6;
 const speechRepeatCooldownMs = 3000;
 const emotionSpeechCooldownMs = 5000;
+const ocrSpeechCooldownMs = 7000;
 const emotionDetectionStride = 12;
+const ocrDetectionStride = 35;
 const drawConfidenceThreshold = 0.55;
 const stableConfidenceThreshold = 0.7;
 const requiredStableFrames = 2;
 const lastSpokenLabelAt = {};
 const lastSpokenEmotionAt = {};
+const lastSpokenOcrAt = {};
 const labelStreakCount = {};
 let emotionModelIsLoaded = false;
 let activeCameraStream = null;
 const historyEntries = [];
+let lastOcrText = "";
 
 if (fpsValueText) {
     fpsValueText.innerText = document.getElementById("fps").value;
@@ -114,12 +127,22 @@ function timerCallback() {
     if (isReady()) {
         setResolution();
         ctx1.drawImage(video, 0, 0, c1.width, c1.height);
+        ocrCanvas.width = c1.width;
+        ocrCanvas.height = c1.height;
+        ocrCtx.drawImage(video, 0, 0, ocrCanvas.width, ocrCanvas.height);
         if (aiEnabled) {
             ai();
             emotionTick += 1;
             if (emotionModelIsLoaded && emotionTick >= emotionDetectionStride) {
                 emotionTick = 0;
                 detectEmotion();
+            }
+        }
+        if (ocrEnabled) {
+            ocrTick += 1;
+            if (ocrTick >= ocrDetectionStride) {
+                ocrTick = 0;
+                scanCurrentFrame();
             }
         }
     }
@@ -180,6 +203,18 @@ function toggleSpeech() {
     } else {
         updateAnnouncement("Speech enabled.");
         addHistoryEntry("Speech enabled");
+    }
+}
+
+function toggleOcr() {
+    ocrEnabled = document.getElementById("ocr").checked;
+    if (ocrEnabled) {
+        updateOcrStatus("OCR enabled. Scanning soon...", "ready");
+        addHistoryEntry("OCR enabled");
+        scanCurrentFrame();
+    } else {
+        updateOcrStatus("OCR paused.", "warning");
+        addHistoryEntry("OCR paused");
     }
 }
 
@@ -472,6 +507,46 @@ function speakDetectedEmotion(label) {
     speakMessage("Emotion detected: " + label, false);
 }
 
+function scanCurrentFrame() {
+    if (!cameraAvailable || ocrInProgress || typeof Tesseract === "undefined") {
+        if (typeof Tesseract === "undefined") {
+            updateOcrStatus("OCR library not loaded.", "warning");
+        }
+        return;
+    }
+
+    ocrInProgress = true;
+    updateOcrStatus("Scanning text...", "ready");
+
+    Tesseract.recognize(ocrCanvas, "eng", {
+        logger: function (message) {
+            if (message && message.status === "recognizing text") {
+                const percent = message.progress ? Math.round(message.progress * 100) : 0;
+                updateOcrStatus("Scanning text... " + percent + "%", "ready");
+            }
+        }
+    }).then(function (result) {
+        ocrInProgress = false;
+
+        const extractedText = normalizeOcrText(result && result.data ? result.data.text : "");
+        if (!extractedText) {
+            updateOcrStatus("No text found.", "warning");
+            updateOcrResult("No text found in the current frame.");
+            return;
+        }
+
+        updateOcrStatus("Text recognized.", "ready");
+        updateOcrResult(extractedText);
+        addHistoryEntry("OCR: " + shortenTextForHistory(extractedText));
+        speakDetectedText(extractedText);
+        lastOcrText = extractedText;
+    }).catch(function (error) {
+        ocrInProgress = false;
+        console.error(error);
+        updateOcrStatus("OCR scan failed.", "warning");
+    });
+}
+
 function updateEmotionStatus(message, tone) {
     if (!emotionText) {
         return;
@@ -485,6 +560,55 @@ function updateEmotionStatus(message, tone) {
     } else if (tone === "warning") {
         emotionText.classList.add("warning");
     }
+}
+
+function updateOcrStatus(message, tone) {
+    if (!ocrStatus) {
+        return;
+    }
+
+    ocrStatus.innerText = message;
+    ocrStatus.classList.remove("ready", "warning");
+
+    if (tone === "ready") {
+        ocrStatus.classList.add("ready");
+    } else if (tone === "warning") {
+        ocrStatus.classList.add("warning");
+    }
+}
+
+function updateOcrResult(message) {
+    if (ocrText) {
+        ocrText.innerText = message;
+    }
+}
+
+function normalizeOcrText(text) {
+    return (text || "").replace(/\s+/g, " ").trim();
+}
+
+function shortenTextForHistory(text) {
+    if (!text) {
+        return "";
+    }
+
+    return text.length > 48 ? text.slice(0, 48) + "..." : text;
+}
+
+function speakDetectedText(text) {
+    if (!speechSupported || !speechEnabled || window.speechSynthesis.speaking) {
+        return;
+    }
+
+    const now = Date.now();
+    const key = text.toLowerCase();
+    const lastSpokenAt = lastSpokenOcrAt[key] || 0;
+    if (now - lastSpokenAt < ocrSpeechCooldownMs) {
+        return;
+    }
+
+    lastSpokenOcrAt[key] = now;
+    speakMessage("Text detected: " + text, false);
 }
 
 function updateAnnouncement(message) {
