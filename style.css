@@ -237,11 +237,6 @@ video {
     align-items: flex-start;
 }
 
-.ocr-row,
-.ocr-action-row {
-    align-items: center;
-}
-
 .camera-row {
     align-items: center;
 }
@@ -324,60 +319,6 @@ video {
     background: rgba(252, 236, 231, 0.96);
     border-color: rgba(194, 76, 51, 0.28);
     color: #9e3b28;
-}
-
-.ocr-card {
-    border-radius: 14px;
-    border: 1px solid rgba(90, 116, 162, 0.24);
-    background: rgba(249, 252, 255, 0.72);
-    padding: 14px;
-}
-
-.ocr-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-
-.ocr-status {
-    min-width: 92px;
-    padding: 8px 10px;
-    border-radius: 999px;
-    border: 1px solid rgba(90, 116, 162, 0.24);
-    background: rgba(255, 255, 255, 0.88);
-    color: #305084;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-align: center;
-}
-
-.ocr-status.ready {
-    background: rgba(233, 247, 236, 0.96);
-    border-color: rgba(46, 164, 79, 0.28);
-    color: #1f6a36;
-}
-
-.ocr-status.warning {
-    background: rgba(252, 236, 231, 0.96);
-    border-color: rgba(194, 76, 51, 0.28);
-    color: #9e3b28;
-}
-
-.ocr-result {
-    min-height: 84px;
-    border-radius: 12px;
-    border: 1px dashed rgba(90, 116, 162, 0.32);
-    background: rgba(255, 255, 255, 0.82);
-    color: #305084;
-    padding: 12px;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
 }
 
 .fps-slider {
@@ -473,14 +414,6 @@ input[type=range]::-moz-range-thumb {
     }
 
     .switch-wrap {
-        align-self: flex-start;
-    }
-
-    .ocr-header {
-        flex-direction: column;
-    }
-
-    .ocr-status {
         align-self: flex-start;
     }
 

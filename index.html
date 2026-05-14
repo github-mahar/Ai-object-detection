@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" type="text/javascript"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" type="text/javascript"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js" type="text/javascript"></script>
 </head>
 
@@ -34,8 +33,8 @@
         <header class="hero">
           <p class="eyebrow">Assistive Vision App</p>
           <h1>Object and Emotion Detection for Blinds</h1>
-          <p class="subtitle">A simple audio-first tool that speaks detected object names, facial emotions, and on-screen text in real time.</p>
-          <span class="status-pill" id="loadingText" role="status" aria-live="polite">Loading object, emotion, and OCR tools...</span>
+          <p class="subtitle">A simple audio-first tool that speaks detected object names and facial emotions in real time.</p>
+          <span class="status-pill" id="loadingText" role="status" aria-live="polite">Loading object and emotion models...</span>
         </header>
 
         <section class="viewer-card">
@@ -99,42 +98,6 @@
               <p class="control-helper">Reads the strongest facial expression when a face is visible</p>
             </div>
             <div class="emotion-readout" id="emotionText" aria-live="polite" aria-atomic="true">Waiting for a face...</div>
-          </div>
-
-          <div class="control-row ocr-row">
-            <div>
-              <p class="control-label">Text Recognition</p>
-              <p class="control-helper">Read text from signs, labels, menus, and documents</p>
-            </div>
-            <div class="switch-wrap">
-              <span class="switch-text">Off</span>
-              <div class="switch">
-                <label>
-                  <input type="checkbox" id="ocr" aria-label="Toggle text recognition">
-                  <span class="lever"></span>
-                </label>
-              </div>
-              <span class="switch-text">On</span>
-            </div>
-          </div>
-
-          <div class="control-row ocr-action-row">
-            <div>
-              <p class="control-label">Scan Current Frame</p>
-              <p class="control-helper">Capture the camera view and extract visible text once</p>
-            </div>
-            <button class="btn-flat camera-button" type="button" id="scanText">Scan Text</button>
-          </div>
-
-          <div class="ocr-card">
-            <div class="ocr-header">
-              <div>
-                <p class="control-label">OCR Result</p>
-                <p class="control-helper">Recognized text appears here and can be spoken aloud</p>
-              </div>
-              <span class="ocr-status" id="ocrStatus">Idle</span>
-            </div>
-            <div class="ocr-result" id="ocrText" aria-live="polite" aria-atomic="true">No text scanned yet.</div>
           </div>
 
           <div class="control-row camera-row">
