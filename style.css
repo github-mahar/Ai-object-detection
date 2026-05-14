@@ -237,6 +237,10 @@ video {
     align-items: flex-start;
 }
 
+.camera-row {
+    align-items: center;
+}
+
 .control-label {
     margin: 0;
     font-weight: 600;
@@ -269,6 +273,21 @@ video {
 
 .switch label input[type=checkbox]:checked+.lever:after {
     background-color: var(--accent);
+}
+
+.btn-flat.camera-button,
+.btn-flat.history-clear {
+    background: rgba(45, 120, 243, 0.12);
+    color: #2356af;
+    border-radius: 999px;
+    text-transform: none;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.btn-flat.camera-button:hover,
+.btn-flat.history-clear:hover {
+    background: rgba(45, 120, 243, 0.18);
 }
 
 .fps-readout {
@@ -318,6 +337,45 @@ video {
     font-size: 0.9rem;
 }
 
+.history-card {
+    border-radius: 14px;
+    border: 1px solid rgba(90, 116, 162, 0.24);
+    background: rgba(249, 252, 255, 0.72);
+    padding: 14px;
+}
+
+.history-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.history-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+}
+
+.history-item,
+.history-empty {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(90, 116, 162, 0.14);
+    color: #305084;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.86rem;
+}
+
+.history-empty {
+    color: #6a7eab;
+    font-style: italic;
+}
+
 input[type=range] {
     border: 0;
 }
@@ -356,6 +414,14 @@ input[type=range]::-moz-range-thumb {
     }
 
     .switch-wrap {
+        align-self: flex-start;
+    }
+
+    .history-header {
+        flex-direction: column;
+    }
+
+    .history-clear {
         align-self: flex-start;
     }
 }

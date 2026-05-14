@@ -66,6 +66,23 @@
 
           <div class="control-row">
             <div>
+              <p class="control-label">Speech Output</p>
+              <p class="control-helper">Mute or unmute spoken detection feedback without stopping analysis</p>
+            </div>
+            <div class="switch-wrap">
+              <span class="switch-text">Off</span>
+              <div class="switch">
+                <label>
+                  <input type="checkbox" id="speech" checked aria-label="Toggle speech output">
+                  <span class="lever"></span>
+                </label>
+              </div>
+              <span class="switch-text">On</span>
+            </div>
+          </div>
+
+          <div class="control-row">
+            <div>
               <p class="control-label">Frame Rate</p>
               <p class="control-helper">Higher values detect faster but use more battery and CPU</p>
             </div>
@@ -81,6 +98,25 @@
               <p class="control-helper">Reads the strongest facial expression when a face is visible</p>
             </div>
             <div class="emotion-readout" id="emotionText" aria-live="polite" aria-atomic="true">Waiting for a face...</div>
+          </div>
+
+          <div class="control-row camera-row">
+            <div>
+              <p class="control-label">Camera View</p>
+              <p class="control-helper">Switch between front and back camera when available</p>
+            </div>
+            <button class="btn-flat camera-button" type="button" id="flipCamera">Flip Camera</button>
+          </div>
+
+          <div class="history-card">
+            <div class="history-header">
+              <div>
+                <p class="control-label">Detection History</p>
+                <p class="control-helper">Latest spoken object and emotion updates</p>
+              </div>
+              <button class="btn-flat history-clear" type="button" id="clearHistory">Clear</button>
+            </div>
+            <ul class="history-list" id="historyList" aria-live="polite" aria-atomic="false"></ul>
           </div>
 
           <div class="announce-card" id="announceText" aria-live="polite" aria-atomic="true">

@@ -1,5 +1,8 @@
 document.getElementById("ai").addEventListener("change", toggleAi)
+document.getElementById("speech").addEventListener("change", toggleSpeech)
 document.getElementById("fps").addEventListener("input", changeFps)
+document.getElementById("flipCamera").addEventListener("click", flipCamera)
+document.getElementById("clearHistory").addEventListener("click", clearHistory)
 
 const video = document.getElementById("video");
 const c1 = document.getElementById('c1');
@@ -8,9 +11,12 @@ const loadingText = document.getElementById("loadingText");
 const fpsValueText = document.getElementById("fpsValue");
 const announceText = document.getElementById("announceText");
 const emotionText = document.getElementById("emotionText");
+const historyList = document.getElementById("historyList");
 const emotionModelUrl = "https://justadudewhohacks.github.io/face-api.js/models";
 var cameraAvailable = false;
 var aiEnabled = false;
+var speechEnabled = true;
+var cameraFacingMode = "environment";
 var fps = 16;
 let detectionInProgress = false;
 let emotionDetectionInProgress = false;
@@ -27,6 +33,8 @@ const lastSpokenLabelAt = {};
 const lastSpokenEmotionAt = {};
 const labelStreakCount = {};
 let emotionModelIsLoaded = false;
+let activeCameraStream = null;
+const historyEntries = [];
 
 if (fpsValueText) {
     fpsValueText.innerText = document.getElementById("fps").value;
@@ -35,7 +43,7 @@ if (fpsValueText) {
 loadEmotionModels();
 
 /* Setting up the constraint */
-var facingMode = "environment"; // Can be 'user' or 'environment' to access back or front camera (NEAT!)
+var facingMode = cameraFacingMode; // Can be 'user' or 'environment' to access back or front camera (NEAT!)
 var constraints = {
     audio: false,
     video: {
@@ -45,24 +53,57 @@ var constraints = {
 
 /* Stream it to video element */
 camera();
-function camera() {
-    if (!cameraAvailable) {
-        console.log("camera")
-        navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
-            cameraAvailable = true;
-            video.srcObject = stream;
-        }).catch(function (err) {
-            cameraAvailable = false;
-            if (modelIsLoaded) {
-                if (err.name === "NotAllowedError") {
-                    loadingText.innerText = "Waiting for camera permission";
-                    loadingText.classList.add("warning");
-                    updateAnnouncement("Camera permission is required.");
-                }
-            }
-            setTimeout(camera, 1000);
-        });
+function camera(forceRestart) {
+    if (cameraAvailable && !forceRestart) {
+        return;
     }
+
+    constraints.video.facingMode = cameraFacingMode;
+
+    if (forceRestart && activeCameraStream) {
+        stopCameraStream();
+    }
+
+    navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
+        cameraAvailable = true;
+        activeCameraStream = stream;
+        video.srcObject = stream;
+        updateCameraStatus("Camera: " + formatCameraMode(cameraFacingMode), "ready");
+    }).catch(function (err) {
+        cameraAvailable = false;
+        if (modelIsLoaded) {
+            if (err.name === "NotAllowedError") {
+                loadingText.innerText = "Waiting for camera permission";
+                loadingText.classList.add("warning");
+                updateAnnouncement("Camera permission is required.");
+                addHistoryEntry("Camera permission is required.");
+            }
+        }
+        setTimeout(function () {
+            camera(forceRestart);
+        }, 1000);
+    });
+}
+
+function stopCameraStream() {
+    if (!activeCameraStream) {
+        return;
+    }
+
+    const tracks = activeCameraStream.getTracks();
+    for (let index = 0; index < tracks.length; index++) {
+        tracks[index].stop();
+    }
+
+    activeCameraStream = null;
+    cameraAvailable = false;
+}
+
+function flipCamera() {
+    cameraFacingMode = cameraFacingMode === "environment" ? "user" : "environment";
+    updateCameraStatus("Switching to " + formatCameraMode(cameraFacingMode) + " camera...", "warning");
+    addHistoryEntry("Switched to " + formatCameraMode(cameraFacingMode) + " camera");
+    camera(true);
 }
 
 window.onload = function () {
@@ -120,11 +161,25 @@ function toggleAi() {
         window.speechSynthesis.cancel();
         updateAnnouncement("Detection paused.");
         updateEmotionStatus("Emotion detection paused.", "warning");
+        addHistoryEntry("Detection paused");
     } else if (aiEnabled) {
         updateAnnouncement("Detection started.");
         if (emotionModelIsLoaded) {
             updateEmotionStatus("Waiting for a face...", "warning");
         }
+        addHistoryEntry("Detection started");
+    }
+}
+
+function toggleSpeech() {
+    speechEnabled = document.getElementById("speech").checked;
+    if (!speechEnabled && speechSupported) {
+        window.speechSynthesis.cancel();
+        updateAnnouncement("Speech muted.");
+        addHistoryEntry("Speech muted");
+    } else {
+        updateAnnouncement("Speech enabled.");
+        addHistoryEntry("Speech enabled");
     }
 }
 
@@ -223,7 +278,7 @@ function getStableDetections(detections) {
 }
 
 function speakBestDetectedObject(results) {
-    if (!speechSupported || !aiEnabled || window.speechSynthesis.speaking || !Array.isArray(results)) {
+    if (!speechSupported || !aiEnabled || !speechEnabled || window.speechSynthesis.speaking || !Array.isArray(results)) {
         return;
     }
 
@@ -255,6 +310,7 @@ function speakBestDetectedObject(results) {
 
     lastSpokenLabelAt[bestMatch.label] = now;
     updateAnnouncement("Detected: " + message);
+    addHistoryEntry("Object: " + message);
     speakMessage(message, false);
 
     if ("vibrate" in navigator) {
@@ -401,7 +457,7 @@ function drawEmotionDetection(face, label, confidence) {
 }
 
 function speakDetectedEmotion(label) {
-    if (!speechSupported || !aiEnabled || window.speechSynthesis.speaking) {
+    if (!speechSupported || !aiEnabled || !speechEnabled || window.speechSynthesis.speaking) {
         return;
     }
 
@@ -412,6 +468,7 @@ function speakDetectedEmotion(label) {
     }
 
     lastSpokenEmotionAt[label] = now;
+    addHistoryEntry("Emotion: " + label);
     speakMessage("Emotion detected: " + label, false);
 }
 
@@ -435,3 +492,65 @@ function updateAnnouncement(message) {
         announceText.innerText = message;
     }
 }
+
+function addHistoryEntry(message) {
+    if (!historyList || !message) {
+        return;
+    }
+
+    const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const entry = timestamp + " - " + message;
+    historyEntries.unshift(entry);
+    historyEntries.splice(5);
+
+    renderHistory();
+}
+
+function renderHistory() {
+    if (!historyList) {
+        return;
+    }
+
+    historyList.innerHTML = "";
+
+    for (let index = 0; index < historyEntries.length; index++) {
+        const item = document.createElement("li");
+        item.className = "history-item";
+        item.innerText = historyEntries[index];
+        historyList.appendChild(item);
+    }
+
+    if (historyEntries.length === 0) {
+        const emptyItem = document.createElement("li");
+        emptyItem.className = "history-empty";
+        emptyItem.innerText = "No detections yet.";
+        historyList.appendChild(emptyItem);
+    }
+}
+
+function clearHistory() {
+    historyEntries.length = 0;
+    renderHistory();
+    updateAnnouncement("History cleared.");
+}
+
+function formatCameraMode(mode) {
+    return mode === "user" ? "front" : "back";
+}
+
+function updateCameraStatus(message, tone) {
+    if (!loadingText) {
+        return;
+    }
+
+    loadingText.innerText = message;
+    loadingText.classList.remove("ready", "warning");
+
+    if (tone === "ready") {
+        loadingText.classList.add("ready");
+    } else if (tone === "warning") {
+        loadingText.classList.add("warning");
+    }
+}
+
+renderHistory();
