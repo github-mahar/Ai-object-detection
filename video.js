@@ -11,6 +11,8 @@ const c1 = document.getElementById('c1');
 const ctx1 = c1.getContext('2d');
 const ocrCanvas = document.createElement("canvas");
 const ocrCtx = ocrCanvas.getContext('2d');
+const ocrSourceCanvas = document.createElement("canvas");
+const ocrSourceCtx = ocrSourceCanvas.getContext('2d');
 const loadingText = document.getElementById("loadingText");
 const fpsValueText = document.getElementById("fpsValue");
 const announceText = document.getElementById("announceText");
@@ -35,6 +37,7 @@ const speechConfidenceThreshold = 0.6;
 const speechRepeatCooldownMs = 3000;
 const emotionSpeechCooldownMs = 5000;
 const ocrSpeechCooldownMs = 7000;
+const ocrAutoScanCooldownMs = 5000;
 const emotionDetectionStride = 12;
 const ocrDetectionStride = 35;
 const drawConfidenceThreshold = 0.55;
@@ -47,7 +50,7 @@ const labelStreakCount = {};
 let emotionModelIsLoaded = false;
 let activeCameraStream = null;
 const historyEntries = [];
-let lastOcrText = "";
+let lastOcrScanAt = 0;
 
 if (fpsValueText) {
     fpsValueText.innerText = document.getElementById("fps").value;
@@ -127,9 +130,6 @@ function timerCallback() {
     if (isReady()) {
         setResolution();
         ctx1.drawImage(video, 0, 0, c1.width, c1.height);
-        ocrCanvas.width = c1.width;
-        ocrCanvas.height = c1.height;
-        ocrCtx.drawImage(video, 0, 0, ocrCanvas.width, ocrCanvas.height);
         if (aiEnabled) {
             ai();
             emotionTick += 1;
@@ -140,9 +140,9 @@ function timerCallback() {
         }
         if (ocrEnabled) {
             ocrTick += 1;
-            if (ocrTick >= ocrDetectionStride) {
+            if (ocrTick >= ocrDetectionStride && Date.now() - lastOcrScanAt >= ocrAutoScanCooldownMs) {
                 ocrTick = 0;
-                scanCurrentFrame();
+                scanCurrentFrame(true);
             }
         }
     }
@@ -209,9 +209,9 @@ function toggleSpeech() {
 function toggleOcr() {
     ocrEnabled = document.getElementById("ocr").checked;
     if (ocrEnabled) {
-        updateOcrStatus("OCR enabled. Scanning soon...", "ready");
+        updateOcrStatus("OCR enabled. Tap Scan Text for best results.", "ready");
         addHistoryEntry("OCR enabled");
-        scanCurrentFrame();
+        ocrTick = 0;
     } else {
         updateOcrStatus("OCR paused.", "warning");
         addHistoryEntry("OCR paused");
@@ -507,7 +507,7 @@ function speakDetectedEmotion(label) {
     speakMessage("Emotion detected: " + label, false);
 }
 
-function scanCurrentFrame() {
+function scanCurrentFrame(isAutoScan) {
     if (!cameraAvailable || ocrInProgress || typeof Tesseract === "undefined") {
         if (typeof Tesseract === "undefined") {
             updateOcrStatus("OCR library not loaded.", "warning");
@@ -515,10 +515,14 @@ function scanCurrentFrame() {
         return;
     }
 
-    ocrInProgress = true;
-    updateOcrStatus("Scanning text...", "ready");
+    lastOcrScanAt = Date.now();
 
-    Tesseract.recognize(ocrCanvas, "eng", {
+    ocrInProgress = true;
+    updateOcrStatus(isAutoScan ? "Auto-scanning text..." : "Scanning text...", "ready");
+
+    const preparedCanvas = prepareOcrCanvas();
+
+    Tesseract.recognize(preparedCanvas, "eng", {
         logger: function (message) {
             if (message && message.status === "recognizing text") {
                 const percent = message.progress ? Math.round(message.progress * 100) : 0;
@@ -539,12 +543,53 @@ function scanCurrentFrame() {
         updateOcrResult(extractedText);
         addHistoryEntry("OCR: " + shortenTextForHistory(extractedText));
         speakDetectedText(extractedText);
-        lastOcrText = extractedText;
     }).catch(function (error) {
         ocrInProgress = false;
         console.error(error);
         updateOcrStatus("OCR scan failed.", "warning");
     });
+}
+
+function prepareOcrCanvas() {
+    const scaleFactor = 2;
+    const sourceWidth = Math.max(1, video.videoWidth || c1.width);
+    const sourceHeight = Math.max(1, video.videoHeight || c1.height);
+    const targetWidth = Math.max(1, Math.round(sourceWidth * scaleFactor));
+    const targetHeight = Math.max(1, Math.round(sourceHeight * scaleFactor));
+
+    ocrSourceCanvas.width = sourceWidth;
+    ocrSourceCanvas.height = sourceHeight;
+    ocrSourceCtx.drawImage(video, 0, 0, sourceWidth, sourceHeight);
+
+    ocrCanvas.width = targetWidth;
+    ocrCanvas.height = targetHeight;
+    ocrCtx.drawImage(ocrSourceCanvas, 0, 0, targetWidth, targetHeight);
+
+    const imageData = ocrCtx.getImageData(0, 0, targetWidth, targetHeight);
+    const pixels = imageData.data;
+    let brightnessTotal = 0;
+
+    for (let index = 0; index < pixels.length; index += 4) {
+        const gray = Math.round((pixels[index] + pixels[index + 1] + pixels[index + 2]) / 3);
+        brightnessTotal += gray;
+        pixels[index] = gray;
+        pixels[index + 1] = gray;
+        pixels[index + 2] = gray;
+    }
+
+    const averageBrightness = brightnessTotal / (pixels.length / 4);
+    const threshold = averageBrightness > 140 ? 170 : 125;
+
+    for (let index = 0; index < pixels.length; index += 4) {
+        const value = pixels[index] > threshold ? 255 : 0;
+        pixels[index] = value;
+        pixels[index + 1] = value;
+        pixels[index + 2] = value;
+        pixels[index + 3] = 255;
+    }
+
+    ocrCtx.putImageData(imageData, 0, 0);
+    return ocrCanvas;
 }
 
 function updateEmotionStatus(message, tone) {
